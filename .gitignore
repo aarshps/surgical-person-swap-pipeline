@@ -1,0 +1,47 @@
+# Virtual Environment
+venv/
+.venv/
+
+# Large Model Files (Do not commit models)
+*.onnx
+*.pth
+*.gguf
+*.safetensors
+*.bin
+
+# User Data & References
+aya_refs/
+target_pics/
+mrunal_refs/
+mrunal/
+mia/
+gabbie/
+profiles/
+
+# Generated Samples
+samples/
+output/
+processed/
+
+# Temporary & Log Files
+*.log
+temp_*
+nohup.out
+__pycache__/
+*.pyc
+
+# Local Environment
+.env
+.gemini/
+.insightface/
+.cache/
+.npm/
+.config/
+
+# Sensitive Dotfiles
+.*
+!.gitignore
+!.github/
+
+# Embedded repositories
+stable-diffusion.cpp/
