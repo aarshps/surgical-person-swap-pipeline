@@ -10,13 +10,15 @@ venv/
 *.bin
 
 # User Data & References
+data/references/
+data/targets/
+data/profiles/
 aya_refs/
 target_pics/
 mrunal_refs/
 mrunal/
 mia/
 gabbie/
-profiles/
 
 # Generated Samples
 samples/
