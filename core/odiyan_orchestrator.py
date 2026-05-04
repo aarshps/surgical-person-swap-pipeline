@@ -6,7 +6,7 @@ from gfpgan import GFPGANer
 from skimage.exposure import match_histograms
 import glob
 
-class AyaOrchestrator:
+class OdiyanOrchestrator:
     def __init__(self):
         print("Initializing Advanced Face-Replace Pipeline...")
         self.app = insightface.app.FaceAnalysis(name='buffalo_l')
@@ -16,12 +16,12 @@ class AyaOrchestrator:
             model_path='https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth',
             upscale=1, arch='clean', channel_multiplier=2, bg_upsampler=None
         )
-        self.profile_path = "data/profiles/aya.npy"
-        self.aya_face = None
+        self.profile_path = "data/profiles/odiyan.npy"
+        self.odiyan_face = None
 
     def execute_swap(self, target_path):
         """Advanced Face Replace: No SD, pure high-fidelity face blending."""
-        if not self.aya_face: self._load_profile()
+        if not self.odiyan_face: self._load_profile()
         target_img = cv2.imread(target_path)
         if target_img is None: return
         
@@ -32,7 +32,7 @@ class AyaOrchestrator:
         print(f"[Agent] Executing advanced face replace for: {target_path}")
         
         # 1. High-Fidelity Swap
-        swapped = self.swapper.get(target_img, target_face, self.aya_face, paste_back=True)
+        swapped = self.swapper.get(target_img, target_face, self.odiyan_face, paste_back=True)
         
         # 3. GFPGAN Restoration (Restore High-Freq details)
         _, _, restored = self.restorer.enhance(swapped, has_aligned=False, only_center_face=False, paste_back=True)
@@ -40,7 +40,7 @@ class AyaOrchestrator:
         # 4. Surgical Integration (Blend GFPGAN inner face over swapped face and add grain)
         final = self._integrate_face(target_img, swapped, restored, target_face)
         
-        out_path = os.path.join("output/samples/aya_swaps", "advanced_" + os.path.basename(target_path))
+        out_path = os.path.join("output/samples/odiyan_swaps", "advanced_" + os.path.basename(target_path))
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         cv2.imwrite(out_path, final)
         print(f"[Agent] Success: {out_path}")
@@ -72,12 +72,12 @@ class AyaOrchestrator:
                 def __init__(self, embedding):
                     self.embedding = embedding
                     self.normed_embedding = embedding
-            self.aya_face = MockFace(emb)
+            self.odiyan_face = MockFace(emb)
             return True
         return False
 
-    def learn_aya(self, ref_dir="data/references/aya"):
-        print(f"[Agent] Learning Aya's features from {ref_dir}...")
+    def learn_odiyan(self, ref_dir="data/references/odiyan"):
+        print(f"[Agent] Learning Odiyan's features from {ref_dir}...")
         ref_paths = glob.glob(os.path.join(ref_dir, "*"))
         embeddings = []
         for path in ref_paths:
@@ -94,13 +94,13 @@ class AyaOrchestrator:
             def __init__(self, embedding):
                 self.embedding = embedding
                 self.normed_embedding = embedding
-        self.aya_face = MockFace(normed_emb)
+        self.odiyan_face = MockFace(normed_emb)
         os.makedirs(os.path.dirname(self.profile_path), exist_ok=True)
-        np.save(self.profile_path, self.aya_face.embedding)
+        np.save(self.profile_path, self.odiyan_face.embedding)
         return True
 
 if __name__ == "__main__":
-    orch = AyaOrchestrator()
+    orch = OdiyanOrchestrator()
     for t in glob.glob("data/targets/mixed/*.jpg"):
         orch.execute_swap(t)
 

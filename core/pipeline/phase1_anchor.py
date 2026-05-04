@@ -9,7 +9,7 @@ def match_colors(source, target):
     return match_histograms(source, target, channel_axis=-1)
 
 class Phase1:
-    def __init__(self, profile_path="data/profiles/aya.npy"):
+    def __init__(self, profile_path="data/profiles/odiyan.npy"):
         print("Loading InsightFace for Phase 1...")
         self.app = insightface.app.FaceAnalysis(name='buffalo_l')
         self.app.prepare(ctx_id=0, det_size=(640, 640))
@@ -22,7 +22,7 @@ class Phase1:
             def __init__(self, embedding):
                 self.embedding = embedding
                 self.normed_embedding = embedding
-        aya_face = MockFace(emb)
+        odiyan_face = MockFace(emb)
         
         target_img = cv2.imread(target_path)
         faces = self.app.get(target_img)
@@ -30,7 +30,7 @@ class Phase1:
         target_face = sorted(faces, key=lambda x: (x.bbox[2]-x.bbox[0])*(x.bbox[3]-x.bbox[1]), reverse=True)[0]
         
         # Identity Anchor
-        swapped_base = self.swapper.get(target_img, target_face, aya_face, paste_back=True)
+        swapped_base = self.swapper.get(target_img, target_face, odiyan_face, paste_back=True)
         swapped_base = match_colors(swapped_base, target_img)
         
         # Surgical Crop (Strictly Square to prevent distortion)

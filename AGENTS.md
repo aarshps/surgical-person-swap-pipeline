@@ -1,6 +1,6 @@
 # System Agents
 
-This project utilizes a distributed agent-based model to manage the complexities of the AI inference pipeline. Each agent is responsible for a specific domain of the "Person Swap" transformation.
+This project utilizes a distributed agent-based model to manage the complexities of the AI inference pipeline. Each agent is responsible for a specific domain of the "Odiyan" transformation.
 
 ## 1. Pipeline Orchestrator
 - **Strategic Goal:** Ensure process continuity in low-resource environments.

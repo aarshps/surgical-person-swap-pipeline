@@ -22,8 +22,8 @@ The pipeline is split into three distinct phases for maximum stability and quali
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/aarshps/surgical-person-swap-pipeline.git
-   cd surgical-person-swap-pipeline
+   git clone https://github.com/aarshps/hora-odiyan.git
+   cd hora-odiyan
    ```
 
 2. **Initialize Environment:**
@@ -40,13 +40,13 @@ The pipeline is split into three distinct phases for maximum stability and quali
 
 ## 📖 Usage
 
-1. **Train the Profile:** Drop 20-50 photos of your subject into `aya_refs/`.
+1. **Train the Profile:** Drop 20-50 photos of your subject into `odiyan_refs/`.
 2. **Set Target:** Place the image you want to swap into `target_pics/`.
 3. **Execute:**
    ```bash
-   ./venv/bin/python aya_processor.py
+   ./venv/bin/python odiyan_processor.py
    ```
-4. **Results:** Found in `samples/aya_swaps/`.
+4. **Results:** Found in `samples/odiyan_swaps/`.
 
 ## 📜 Documentation
 - [System Agents](AGENTS.md)

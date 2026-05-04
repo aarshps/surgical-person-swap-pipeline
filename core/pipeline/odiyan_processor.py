@@ -45,9 +45,9 @@ def match_texture_and_blend(swapped_img, target_img, mask):
     
     return np.clip(final_img, 0, 255).astype(np.uint8)
 
-class AyaSwapPipeline:
-    def __init__(self, profile_path="data/profiles/aya.npy"):
-        print("Initializing Hyper-Realistic Aya Pipeline...")
+class OdiyanSwapPipeline:
+    def __init__(self, profile_path="data/profiles/odiyan.npy"):
+        print("Initializing Hyper-Realistic Odiyan Pipeline...")
         self.app = insightface.app.FaceAnalysis(name='buffalo_l')
         self.app.prepare(ctx_id=0, det_size=(640, 640))
         self.swapper = insightface.model_zoo.get_model('inswapper_128.onnx', download=False, download_zip=False)
@@ -55,7 +55,7 @@ class AyaSwapPipeline:
             model_path='https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth',
             upscale=1, arch='clean', channel_multiplier=2, bg_upsampler=None
         )
-        self.aya_face = None
+        self.odiyan_face = None
         self.profile_path = profile_path
         self.sd_url = "http://127.0.0.1:1234/sdapi/v1/img2img"
 
@@ -83,18 +83,18 @@ class AyaSwapPipeline:
                 def __init__(self, embedding):
                     self.embedding = embedding
                     self.normed_embedding = embedding
-            self.aya_face = MockFace(emb)
+            self.odiyan_face = MockFace(emb)
             return True
         return False
 
     def save_profile(self):
-        if self.aya_face is not None:
+        if self.odiyan_face is not None:
             os.makedirs(os.path.dirname(self.profile_path), exist_ok=True)
-            np.save(self.profile_path, self.aya_face.embedding)
+            np.save(self.profile_path, self.odiyan_face.embedding)
 
-    def learn_aya(self, ref_dir="data/references/aya"):
+    def learn_odiyan(self, ref_dir="data/references/odiyan"):
         if self.load_profile(): return True
-        print(f"Learning Aya's features from {ref_dir}...")
+        print(f"Learning Odiyan's features from {ref_dir}...")
         ref_paths = glob.glob(os.path.join(ref_dir, "*"))
         embeddings = []
         for path in ref_paths:
@@ -111,7 +111,7 @@ class AyaSwapPipeline:
             def __init__(self, embedding):
                 self.embedding = embedding
                 self.normed_embedding = embedding
-        self.aya_face = MockFace(normed_emb)
+        self.odiyan_face = MockFace(normed_emb)
         self.save_profile()
         return True
 
@@ -149,8 +149,8 @@ class AyaSwapPipeline:
             print(f"SD Error: {e}")
         return image
 
-    def process_target(self, target_path, output_path, aya_desc="woman with long dark hair, realistic skin"):
-        if self.aya_face is None: return
+    def process_target(self, target_path, output_path, odiyan_desc="woman with long dark hair, realistic skin"):
+        if self.odiyan_face is None: return
         target_img = cv2.imread(target_path)
         if target_img is None: return
         target_faces = self.app.get(target_img)
@@ -159,7 +159,7 @@ class AyaSwapPipeline:
         
         # 1. Anchor
         print("Phase 1: Anchoring identity...")
-        swapped_base = self.swapper.get(target_img, target_face, self.aya_face, paste_back=True)
+        swapped_base = self.swapper.get(target_img, target_face, self.odiyan_face, paste_back=True)
         swapped_base = match_colors(swapped_base, target_img)
         
         # 2. Surgical Crop
@@ -171,7 +171,7 @@ class AyaSwapPipeline:
         
         head_crop = swapped_base[y1:y2, x1:x2]
         self.ensure_sd_server()
-        refined_head = self.refine_with_sd(head_crop, f"{aya_desc}, photorealistic", denoising=0.25)
+        refined_head = self.refine_with_sd(head_crop, f"{odiyan_desc}, photorealistic", denoising=0.25)
         refined_head = cv2.resize(refined_head, (x2-x1, y2-y1))
         
         # 3. Paste Back
@@ -189,7 +189,7 @@ class AyaSwapPipeline:
         final_faces = self.app.get(composite)
         if final_faces:
             f_face = sorted(final_faces, key=lambda x: (x.bbox[2]-x.bbox[0])*(x.bbox[3]-x.bbox[1]), reverse=True)[0]
-            swapped_final = self.swapper.get(composite, f_face, self.aya_face, paste_back=True)
+            swapped_final = self.swapper.get(composite, f_face, self.odiyan_face, paste_back=True)
             _, _, restored = self.restorer.enhance(swapped_final, has_aligned=False, only_center_face=False, paste_back=True)
             mask = create_face_mask(composite, f_face.landmark_2d_106)
             final = match_texture_and_blend(restored, composite, mask)
@@ -199,10 +199,10 @@ class AyaSwapPipeline:
         print(f"Success: {output_path}")
 
 if __name__ == "__main__":
-    pipeline = AyaSwapPipeline()
-    if pipeline.learn_aya():
-        desc = "Aya, beautiful woman, long dark wavy hair, elegant, detailed skin"
+    pipeline = OdiyanSwapPipeline()
+    if pipeline.learn_odiyan():
+        desc = "Odiyan, beautiful woman, long dark wavy hair, elegant, detailed skin"
         targets = glob.glob("data/targets/mixed/*")
-        os.makedirs("output/samples/aya_swaps", exist_ok=True)
+        os.makedirs("output/samples/odiyan_swaps", exist_ok=True)
         for t in targets:
-            pipeline.process_target(t, os.path.join("output/samples/aya_swaps", "surgical_" + os.path.basename(t)), aya_desc=desc)
+            pipeline.process_target(t, os.path.join("output/samples/odiyan_swaps", "surgical_" + os.path.basename(t)), odiyan_desc=desc)

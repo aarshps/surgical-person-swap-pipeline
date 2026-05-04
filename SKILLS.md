@@ -1,8 +1,8 @@
-# Surgical Swap System Skills
+# Odiyan System Skills
 
-These skills define the agentic logic for the `AyaOrchestrator` agent.
+These skills define the agentic logic for the `OdiyanOrchestrator` agent.
 
-## Skill: Surgical Person Swap (State-Aware)
+## Skill: Odiyan (State-Aware)
 - **Objective:** Swap a subject's head onto a target while maintaining 100% background fidelity.
 - **Agent Instructions:**
   1. Initialize `InsightFace` (buffalo_l) and `GFPGAN`.

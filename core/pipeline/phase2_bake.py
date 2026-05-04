@@ -12,7 +12,7 @@ def run_sd_phase():
     img_b64 = base64.b64encode(img_encoded).decode('utf-8')
     
     payload = {
-        "prompt": "Aya, beautiful woman, long dark wavy hair, elegant, detailed skin, photorealistic",
+        "prompt": "Odiyan, beautiful woman, long dark wavy hair, elegant, detailed skin, photorealistic",
         "negative_prompt": "cartoon, painting, illustration, blurry, deformed, bad anatomy",
         "init_images": [img_b64],
         "denoising_strength": 0.25,

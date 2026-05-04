@@ -32,7 +32,7 @@ def match_texture_and_blend(swapped_img, target_img, mask):
     return np.clip(final_img, 0, 255).astype(np.uint8)
 
 class Phase3:
-    def __init__(self, profile_path="data/profiles/aya.npy"):
+    def __init__(self, profile_path="data/profiles/odiyan.npy"):
         print("Loading Restoration Models for Phase 3...")
         self.app = insightface.app.FaceAnalysis(name='buffalo_l')
         self.app.prepare(ctx_id=0, det_size=(640, 640))
@@ -49,7 +49,7 @@ class Phase3:
             def __init__(self, embedding):
                 self.embedding = embedding
                 self.normed_embedding = embedding
-        aya_face = MockFace(emb)
+        odiyan_face = MockFace(emb)
         
         target_img = cv2.imread(target_path)
         with open("temp_meta.txt", "r") as f:
@@ -102,7 +102,7 @@ class Phase3:
         faces = self.app.get(composite)
         if faces:
             f_face = sorted(faces, key=lambda x: (x.bbox[2]-x.bbox[0])*(x.bbox[3]-x.bbox[1]), reverse=True)[0]
-            swapped_final = self.swapper.get(composite, f_face, aya_face, paste_back=True)
+            swapped_final = self.swapper.get(composite, f_face, odiyan_face, paste_back=True)
             _, _, restored = self.restorer.enhance(swapped_final, has_aligned=False, only_center_face=False, paste_back=True)
             
             # Use inner_only=True so we only paste back GFPGAN's eyes/nose/mouth.
@@ -123,5 +123,5 @@ if __name__ == "__main__":
     else:
         targets = glob.glob("data/targets/mixed/*.jpg")
         if targets:
-            out_path = os.path.join("output/samples/aya_swaps", "final_sequential_" + os.path.basename(targets[0]))
+            out_path = os.path.join("output/samples/odiyan_swaps", "final_sequential_" + os.path.basename(targets[0]))
             p3.run(targets[0], out_path)
