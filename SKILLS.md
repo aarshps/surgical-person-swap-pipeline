@@ -1,41 +1,30 @@
-# Agent Skills
+# Surgical Swap System Skills
 
-Detailed capabilities and workflows for the agents powering the Surgical Swap Pipeline.
+These skills define the agentic logic for the `AyaOrchestrator` agent.
 
-## Skill: 3D Facial Profiling (Identity Anchor)
-- **Description:** Building a robust identity model that is immune to single-photo lighting bias.
-- **Workflow:**
-  1. Initialize `insightface.app.FaceAnalysis` with the `buffalo_l` model.
-  2. Ingest a directory of reference portraits.
-  3. Extract the `normed_embedding` for the primary face in each image.
-  4. Perform a vector-mean calculation: `avg_emb = np.mean(embeddings, axis=0)`.
-  5. Normalize the resulting vector: `avg_emb / np.linalg.norm(avg_emb)`.
-  6. Save as a persistent `.npy` file.
+## Skill: Surgical Person Swap (State-Aware)
+- **Objective:** Swap a subject's head onto a target while maintaining 100% background fidelity.
+- **Agent Instructions:**
+  1. Initialize `InsightFace` (buffalo_l) and `GFPGAN`.
+  2. Load cached facial profile from `data/profiles/`.
+  3. Execute **Anchor Phase**: Generate base swap, perform histogram color matching, and calculate square head-crop metadata.
+  4. Execute **Baking Phase**: Start `stable-diffusion.cpp`, resize head-crop to 512x512, perform img2img (10 steps, 0.25 denoising), and save head crop.
+  5. Execute **Integration Phase**: Re-pad the crop to original resolution, generate dynamic elliptical mask to hide chest/neck artifacts, and overlay refined head.
+  6. Execute **Identity Lock**: Re-run GFPGAN restoration (inner-only mask) and apply Laplacian grain overlay for seamless texture.
 
-## Skill: Surgical Head Extraction & Inpainting
-- **Description:** The core logic for isolating the head without losing context.
-- **Workflow:**
-  1. Detect the 106 2D facial landmarks on the target image.
-  2. Calculate the "Head Box" by padding the face bounding box:
-     - Top Padding: 100% of face height (to capture hair).
-     - Bottom Padding: 40% of face height (to capture neck/jaw).
-     - Side Padding: 60% of face width.
-  3. Extract the crop at high resolution.
-  4. Communicate with the local `sd-server` via the `sdapi/v1/img2img` endpoint.
-  5. Use a low `denoising_strength` (0.2 - 0.3) to "bake" textures while preserving the skeletal identity established in Phase 1.
+## Skill: Memory-Efficient Inference
+- **Objective:** Maintain stability on limited (8GB) RAM.
+- **Agent Instructions:**
+  1. Use quantized GGUF models (`dreamshaper_8_q8_0.gguf`).
+  2. Implement sequential hand-off: Free GPU/CPU memory (via process cleanup) between InsightFace, Stable Diffusion, and GFPGAN tasks.
+  3. Use isolated subprocess calls for external binary tasks (SD server) to prevent heap fragmentation.
+  4. Monitor `dmesg` and process logs for OOM signals and implement exponential backoff on retry.
 
-## Skill: Resource-Constrained Server Management
-- **Description:** Optimizing AI inference for 8GB RAM CPU-only environments.
-- **Workflow:**
-  1. Configure `stable-diffusion.cpp` with quantized weights (`q8_0`) to reduce memory footprint.
-  2. Set thread count dynamically (typically 2-4) to balance OS stability and rendering speed.
-  3. Implement a "Sequential Handoff" where heavy models (InsightFace vs. Stable Diffusion) never reside in memory at the same time.
-  4. Monitor process exit codes and trigger automatic server restarts on connection timeouts.
-
-## Skill: Realism Synchronization (Post-Processing)
-- **Description:** Final visual blending to eliminate the "AI Paste" effect.
-- **Workflow:**
-  1. **Color Matching:** Match source face histogram to target neck/body lighting.
-  2. **Texture Transfer:** Extract high-frequency noise from target skin via Laplacian filter and overlay it onto the swapped face.
-  3. **Seamless Blending:** Use a 31px - 51px Gaussian blurred alpha mask for the surgical reintegration.
-  4. **Restoration:** Apply `GFPGAN` to the final composite to sharpen eyes, lips, and pores.
+## Skill: Identity Profiling
+- **Objective:** Maintain perfect subject likeness across arbitrary angles.
+- **Agent Instructions:**
+  1. Ingest large reference datasets (50+ images).
+  2. Extract normed embeddings for all detected faces.
+  3. Calculate vector mean: `avg_emb = mean(embeddings)`.
+  4. Store result as a persistent `.npy` file.
+  5. On subsequent runs, bypass inference entirely by loading the cached profile.
