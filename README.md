@@ -16,16 +16,7 @@ A professional-grade, surgical AI pipeline for high-fidelity person swapping. Un
 
 ## 🛠 Architecture
 
-The pipeline is split into three distinct phases to maximize stability and quality:
-
-### Phase 1: Identity Anchor & Surgical Crop
-Uses `InsightFace` to perform a base swap and calculate a high-resolution surgical crop of the head area. It saves the crop and metadata for isolated processing.
-
-### Phase 2: High-Resolution Bake
-The crop is processed via `Stable Diffusion` (Dreamshaper 8) using `img2img`. This phase "regrows" the source subject's hair style and skin texture onto the target pose at native density.
-
-### Phase 3: Surgical Re-integration & Lock
-The refined head is surgically pasted back into the original high-res photo using feathered blending. A final `GFPGAN` pass and identity-lock ensuring 100% likeness.
+The pipeline is split into three distinct phases for maximum stability and quality. For a detailed breakdown of the internal surgical integration and orchestration, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## 📦 Installation & Setup
 
