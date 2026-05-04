@@ -1,4 +1,4 @@
-# Surgical Person Swap Pipeline Architecture
+# HoraOdiyan Architecture
 
 This pipeline is designed for high-fidelity, surgical-grade identity replacement. It operates in distinct phases, optimizing for local CPU execution while maintaining professional output quality.
 
