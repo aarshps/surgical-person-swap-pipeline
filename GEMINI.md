@@ -1,0 +1,29 @@
+# Gemini Agent Instructions for Odiyan (by Hora)
+
+This file contains the core context, architectural constraints, and operational guidelines for any future AI agent interacting with this repository. It serves as the permanent tracker and handoff document.
+
+## 1. Branding & Naming
+- **Application Name**: Odiyan
+- **Organization Name**: Hora
+- **Context**: Never refer to the project using legacy names (e.g., "Surgical Person Swap", "Aya", or "Mrunal"). The term "surgical" is only used as an adjective for technical precision (e.g., "surgical crop", "surgical integration").
+
+## 2. Core Architecture
+- The pipeline is a low-resource (8GB RAM CPU) multi-phase workflow.
+- **Phase 1 (Anchor)**: Identity anchoring using InsightFace.
+- **Phase 2 (Bake)**: High-resolution texture baking via local Stable Diffusion (`stable-diffusion.cpp` img2img).
+- **Phase 3 (Integrate)**: Surgical blending and GFPGAN high-frequency restoration.
+- Detailed flow is maintained in `ARCHITECTURE.md`.
+
+## 3. Strict Security & Data Policies
+- **Clean Harness Principle**: This repository is strictly the code harness.
+- **NEVER** commit user data, target images, reference images, or generated numpy profiles (`.npy`).
+- The `.gitignore` must aggressively exclude data directories: `data/references/`, `data/targets/`, `data/profiles/`, `odiyan_refs/`, `target_pics/`, `samples/`, and model weights (`*.gguf`, `*.onnx`, `*.pth`).
+
+## 4. Agent Skills & Documentation Standard
+- Agent behavioral logic is defined in `AGENTS.md` and `SKILLS.md`.
+- **Constraint**: Every individual skill defined in `SKILLS.md` MUST remain under 100 lines of text. Do not bloat skill definitions. Keep them actionable and concise.
+- When updating workflows, ensure corresponding documentation (`README.md`, `ARCHITECTURE.md`) is accurately synchronized.
+
+## 5. Development Guidelines
+- Prioritize memory-efficient operations (sequential loading/unloading of models).
+- Rely on vanilla Python OpenCV (`cv2`) and NumPy (`numpy`) for image compositing. Avoid heavy image processing frameworks if simple matrix operations suffice.
