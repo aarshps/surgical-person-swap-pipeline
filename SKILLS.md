@@ -25,3 +25,12 @@ These skills define the agentic logic for the `OdiyanOrchestrator` agent. Keep a
   1. Load references from `odiyan_refs/`.
   2. Extract normed embeddings and calculate the vector mean.
   3. Store result persistently. Bypass redundant learning if profile exists.
+
+## Skill: Environment & Dependency Management
+- **Objective:** Ensure the Python virtual environment correctly supports the complex AI model matrix (GFPGAN, InsightFace, Torch).
+- **Agent Instructions:**
+  1. **Strict Dependencies:** The stack is strictly incompatible with NumPy 2.x. Ensure `numpy<2` (e.g. 1.26.4). OpenCV (`opencv-python` and `opencv-python-headless`) must be `<4.9`, and `tifffile` must be `<2024`.
+  2. **Basicsr Patch:** GFPGAN's `basicsr` dependency breaks on newer `torchvision`. You MUST patch it: `sed -i 's/functional_tensor/functional/' venv/lib/python*/site-packages/basicsr/data/degradations.py`.
+  3. **Missing Models:** Ensure `inswapper_128.onnx` is present in the project root. If missing, download it via `wget -O inswapper_128.onnx https://huggingface.co/ezioruan/inswapper_128.onnx/resolve/main/inswapper_128.onnx`.
+  4. **System GL Libs:** Ensure `libgl1` and `libglib2.0-0` are installed on the host OS.
+  5. Always verify `start_daemon.sh` points explicitly to the `venv` python path to prevent global system conflicts.

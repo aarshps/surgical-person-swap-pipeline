@@ -26,5 +26,5 @@ This project utilizes a distributed agent-based model to manage the complexities
 ## 5. Session Hand-off & Best Practices
 - **Clean Harness Principle**: This repo remains a code harness. NEVER commit `data/`, `odiyan_refs/`, `target_pics/`, `samples/`, or `*.npy` files.
 - **Reference Updates**: If a user updates identity photos, download them into `odiyan_refs/` using the CLI methods documented in the session history (do not commit these).
-- **Agent Resumption**: Future agents MUST check `ARCHITECTURE.md` and the existing skill definitions in `SKILLS.md`.
+- **Agent Resumption**: Future agents MUST check `ARCHITECTURE.md` and the existing skill definitions in `SKILLS.md`. Pay critical attention to the "Environment & Dependency Management" skill, as resolving model conflicts (NumPy, OpenCV, Torchvision) is vital for the daemon to run.
 - **Transparency**: Always ensure that local automation scripts (like the ones used to download images) are generalized. If an agent adds new scripts, commit only the automation logic, NEVER the data it produces.
