@@ -117,20 +117,23 @@ class OdiyanSwapPipeline:
 
     def refine_with_sd(self, image, prompt, denoising=0.4):
         print(f"Baking details with SD (denoising={denoising})...")
-        # Ensure image is exactly 512x512 for memory efficiency and server expectations
-        image_res = cv2.resize(image, (512, 512))
+        # Ensure image is exactly 1024x1024 for maximum clarity and ultra-high resolution
+        image_res = cv2.resize(image, (1024, 1024))
         _, img_encoded = cv2.imencode('.png', image_res)
         img_b64 = base64.b64encode(img_encoded).decode('utf-8')
         
+        # Enhanced prompt for maximum realism and sharpness
+        enhanced_prompt = f"{prompt}, ultra-realistic, 8k resolution, highly detailed skin, sharp focus, dslr, masterpiece, cinematic lighting"
+        
         payload = {
-            "prompt": prompt,
-            "negative_prompt": "cartoon, painting, illustration, blurry, deformed, bad anatomy, (low quality:2)",
+            "prompt": enhanced_prompt,
+            "negative_prompt": "cartoon, painting, illustration, blurry, deformed, bad anatomy, (low quality:2), over-smoothed, plastic skin",
             "init_images": [img_b64],
             "denoising_strength": denoising,
-            "steps": 15,
-            "cfg_scale": 7.0,
-            "width": 512,
-            "height": 512
+            "steps": 25,
+            "cfg_scale": 8.0,
+            "width": 1024,
+            "height": 1024
         }
         
         try:
@@ -185,14 +188,15 @@ class OdiyanSwapPipeline:
         composite[y1:y2, x1:x2] = (refined_head * crop_mask_3ch + target_img[y1:y2, x1:x2] * (1.0 - crop_mask_3ch)).astype(np.uint8)
 
         # 4. Final Identity Lock
-        print("Phase 4: Final Identity Lock...")
+        print("Phase 4: Final Identity Lock (restoration skipped to preserve eye integrity)...")
         final_faces = self.app.get(composite)
         if final_faces:
             f_face = sorted(final_faces, key=lambda x: (x.bbox[2]-x.bbox[0])*(x.bbox[3]-x.bbox[1]), reverse=True)[0]
             swapped_final = self.swapper.get(composite, f_face, self.odiyan_face, paste_back=True)
-            _, _, restored = self.restorer.enhance(swapped_final, has_aligned=False, only_center_face=False, paste_back=True)
+            
+            # Skip restoration (restorer.enhance) to avoid eye artifacts
             mask = create_face_mask(composite, f_face.landmark_2d_106)
-            final = match_texture_and_blend(restored, composite, mask)
+            final = match_texture_and_blend(swapped_final, composite, mask)
         else: final = composite
 
         cv2.imwrite(output_path, inject_noise(final, 0.001))
@@ -200,9 +204,23 @@ class OdiyanSwapPipeline:
 
 if __name__ == "__main__":
     pipeline = OdiyanSwapPipeline()
-    if pipeline.learn_odiyan():
+    if pipeline.learn_odiyan(ref_dir="odiyan_refs"):
         desc = "Odiyan, beautiful woman, long dark wavy hair, elegant, detailed skin"
-        targets = glob.glob("data/targets/mixed/*")
-        os.makedirs("output/samples/odiyan_swaps", exist_ok=True)
-        for t in targets:
-            pipeline.process_target(t, os.path.join("output/samples/odiyan_swaps", "surgical_" + os.path.basename(t)), odiyan_desc=desc)
+        os.makedirs("samples/odiyan_swaps", exist_ok=True)
+        print("Odiyan Daemon is now running. Watching 'target_pics/' for new images...")
+        
+        while True:
+            targets = glob.glob("target_pics/*")
+            for t in targets:
+                # Check if it's a file, not a directory
+                if not os.path.isfile(t): continue
+                
+                output_name = "surgical_" + os.path.basename(t)
+                output_path = os.path.join("samples/odiyan_swaps", output_name)
+                
+                # Only process if we haven't created the output already
+                if not os.path.exists(output_path):
+                    print(f"\n[DAEMON] Found new target: {t}")
+                    pipeline.process_target(t, output_path, odiyan_desc=desc)
+            
+            time.sleep(5)  # Polling interval

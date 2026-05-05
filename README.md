@@ -41,12 +41,12 @@ The pipeline is split into three distinct phases for maximum stability and quali
 ## 📖 Usage
 
 1. **Train the Profile:** Drop 20-50 photos of your subject into `odiyan_refs/`.
-2. **Set Target:** Place the image you want to swap into `target_pics/`.
-3. **Execute:**
+2. **Start the Daemon:** Do not run the python script directly. Start the autonomous background processor:
    ```bash
-   ./venv/bin/python odiyan_processor.py
+   ./start_daemon.sh
    ```
-4. **Results:** Found in `samples/odiyan_swaps/`.
+3. **Set Target:** Place the image you want to swap into `target_pics/`. The daemon will automatically detect it and begin processing in the background.
+4. **Results:** Once the daemon finishes the ultra-high resolution processing, the result will appear in `samples/odiyan_swaps/`. Check `odiyan_daemon.log` for progress.
 
 ## 📜 Documentation
 - [System Agents](AGENTS.md)

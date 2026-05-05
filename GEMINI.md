@@ -8,10 +8,11 @@ This file contains the core context, architectural constraints, and operational 
 - **Context**: Never refer to the project using legacy names (e.g., "Surgical Person Swap", "Aya", or "Mrunal"). The term "surgical" is only used as an adjective for technical precision (e.g., "surgical crop", "surgical integration").
 
 ## 2. Core Architecture
-- The pipeline is a low-resource (8GB RAM CPU) multi-phase workflow.
+- The pipeline is an autonomous background daemon, operating in a low-resource (8GB RAM CPU) environment.
+- **Daemon Execution**: NEVER run the processing scripts directly from the CLI. Always use the background daemon script (`start_daemon.sh`) which polls for new target images.
 - **Phase 1 (Anchor)**: Identity anchoring using InsightFace.
-- **Phase 2 (Bake)**: High-resolution texture baking via local Stable Diffusion (`stable-diffusion.cpp` img2img).
-- **Phase 3 (Integrate)**: Surgical blending and GFPGAN high-frequency restoration.
+- **Phase 2 (Bake)**: Ultra-high-resolution (1024x1024) texture baking via local Stable Diffusion (`stable-diffusion.cpp` img2img).
+- **Phase 3 (Integrate)**: Surgical blending and high-fidelity masking (GFPGAN is explicitly skipped to preserve natural eye integrity).
 - Detailed flow is maintained in `ARCHITECTURE.md`.
 
 ## 3. Strict Security & Data Policies
