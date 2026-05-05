@@ -11,7 +11,7 @@ This file contains the core context, architectural constraints, and operational 
 - The pipeline is an autonomous background daemon, operating in a high-resource CPU environment (48GB RAM, 12 Cores).
 - **Daemon Execution**: NEVER run the processing scripts directly from the CLI. Always use the background daemon script (`start_daemon.sh`) which polls for new target images.
 - **Phase 1 (Anchor)**: Identity anchoring using InsightFace.
-- **Phase 2 (Bake)**: Ultra-high-resolution (1024x1024+) texture baking via local Stable Diffusion (`stable-diffusion.cpp` img2img). SDXL or high-bit quantization is preferred due to 48GB RAM availability.
+- **Phase 2 (Bake)**: Ultra-high-resolution (1024x1024+) texture baking via local Stable Diffusion (`stable-diffusion.cpp` img2img). Flux.1-schnell (via `--diffusion-model`) is the mandated engine for its superior identity retention and detail.
 - **Phase 3 (Integrate)**: Surgical blending and high-fidelity masking (GFPGAN is explicitly skipped to preserve natural eye integrity).
 - Detailed flow is maintained in `ARCHITECTURE.md`.
 
