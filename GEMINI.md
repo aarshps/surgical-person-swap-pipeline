@@ -8,10 +8,10 @@ This file contains the core context, architectural constraints, and operational 
 - **Context**: Never refer to the project using legacy names (e.g., "Surgical Person Swap", "Aya", or "Mrunal"). The term "surgical" is only used as an adjective for technical precision (e.g., "surgical crop", "surgical integration").
 
 ## 2. Core Architecture
-- The pipeline is an autonomous background daemon, operating in a low-resource (8GB RAM CPU) environment.
+- The pipeline is an autonomous background daemon, operating in a high-resource CPU environment (48GB RAM, 12 Cores).
 - **Daemon Execution**: NEVER run the processing scripts directly from the CLI. Always use the background daemon script (`start_daemon.sh`) which polls for new target images.
 - **Phase 1 (Anchor)**: Identity anchoring using InsightFace.
-- **Phase 2 (Bake)**: Ultra-high-resolution (1024x1024) texture baking via local Stable Diffusion (`stable-diffusion.cpp` img2img).
+- **Phase 2 (Bake)**: Ultra-high-resolution (1024x1024+) texture baking via local Stable Diffusion (`stable-diffusion.cpp` img2img). SDXL or high-bit quantization is preferred due to 48GB RAM availability.
 - **Phase 3 (Integrate)**: Surgical blending and high-fidelity masking (GFPGAN is explicitly skipped to preserve natural eye integrity).
 - Detailed flow is maintained in `ARCHITECTURE.md`.
 
@@ -26,5 +26,6 @@ This file contains the core context, architectural constraints, and operational 
 - When updating workflows, ensure corresponding documentation (`README.md`, `ARCHITECTURE.md`) is accurately synchronized.
 
 ## 5. Development Guidelines
-- Prioritize memory-efficient operations (sequential loading/unloading of models).
+- Utilize the 48GB RAM to keep models resident (avoid sequential unloading).
+- Parallelize independent processing tasks across available CPU cores.
 - Rely on vanilla Python OpenCV (`cv2`) and NumPy (`numpy`) for image compositing. Avoid heavy image processing frameworks if simple matrix operations suffice.

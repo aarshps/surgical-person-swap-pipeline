@@ -23,8 +23,11 @@ This project utilizes a distributed agent-based model to manage the complexities
   - Communicates with the Stable Diffusion API to "bake" ultra-realistic, 8k resolution textures into the crop.
   - Generates high-frequency masks for feathered re-integration.
 
-## 5. Session Hand-off & Best Practices
-- **Clean Harness Principle**: This repo remains a code harness. NEVER commit `data/`, `odiyan_refs/`, `target_pics/`, `samples/`, or `*.npy` files.
-- **Reference Updates**: If a user updates identity photos, download them into `odiyan_refs/` using the CLI methods documented in the session history (do not commit these).
-- **Agent Resumption**: Future agents MUST check `ARCHITECTURE.md` and the existing skill definitions in `SKILLS.md`. Pay critical attention to the "Environment & Dependency Management" skill, as resolving model conflicts (NumPy, OpenCV, Torchvision) is vital for the daemon to run.
-- **Transparency**: Always ensure that local automation scripts (like the ones used to download images) are generalized. If an agent adds new scripts, commit only the automation logic, NEVER the data it produces.
+## 4. Security & Operational Standards (Session Handoff)
+- **Clean Harness Principle**: This repository is strictly the code harness. 
+  - **NEVER** commit `data/`, `odiyan_refs/`, `target_pics/`, `samples/`, or `*.npy` files.
+  - **Data Hygiene**: Always use `git status` to ensure only source code is tracked. Staging binaries or user data is a security violation.
+- **Model Engine**: Transitioned to Flux.1-schnell (Bleeding-Edge). All future generation MUST utilize the `Flux` architecture via `--diffusion-model`.
+- **Architectural Standards**: Prioritize Frequency Harmonization and Laplacian Blending over Gaussian blurring for seamless integration.
+- **Agent Resumption**: Future agents MUST check `ARCHITECTURE.md` and `SKILLS.md`. Ensure that `start_server.sh` is configured to use the Flux weight mapping correctly.
+- **Transparency**: If new automation is added, commit ONLY the logic, never the generated assets.

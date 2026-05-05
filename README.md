@@ -1,28 +1,19 @@
-# Odiyan (by Hora)
+# README - Odiyan (by Hora)
 
-A professional-grade, autonomous AI pipeline for identity replacement.
+## Overview
+Odiyan is an autonomous AI pipeline for high-fidelity identity replacement. It utilizes Flux.1-schnell (Bleeding-Edge) for texture generation and Laplacian multi-band blending for surgical integration.
 
-## ⚠️ Critical Security Policy (Clean Harness Principle)
-This repository is strictly a **CODE HARNESS**.
-- **NEVER** commit user data, target images, reference images, or generated profiles (`.npy`).
-- The `.gitignore` is configured to ignore all data and output folders.
-- Future agents MUST NOT deviate from this policy.
+## Quick Start
+1. **Ensure Daemon is running**: `./start_daemon.sh`
+2. **Drop Targets**: Place images in `target_pics/`.
+3. **Collect**: Swaps appear in `samples/odiyan_swaps/`.
 
-## 🚀 Architecture
-The pipeline now operates as an **Autonomous Background Daemon**.
-- **Daemon Execution**: Use `./start_daemon.sh` (which runs `odiyan_processor.py` in the background).
-- **Polling**: The daemon continuously watches `target_pics/` for new images.
-- **Processing**: Automatically transforms targets into surgical swaps at 768x768 resolution using the learned identity profile.
-- **Output**: Results appear in `samples/odiyan_swaps/`.
+## Architecture (Flux.1)
+- **Identity Learning**: Learns features from `odiyan_refs/`.
+- **Refinement**: Flux.1-schnell (via `--diffusion-model`) produces hyper-realistic 1024x1024+ textures.
+- **Blending**: Frequency Harmonization and Laplacian Pyramids ensure zero sharpness mismatch between face and body.
 
-## 📖 Usage
-1. **Train Identity**: Place reference photos in `odiyan_refs/`.
-2. **Start Daemon**: Run `./start_daemon.sh`.
-3. **Queue Targets**: Drop target photos into `target_pics/`.
-4. **Check Status**: Use `./venv/bin/python status.py` for a quick snapshot.
-
-## 📜 Documentation
-- [System Agents](AGENTS.md)
-- [Agent Skills](SKILLS.md)
-- [Architecture Details](ARCHITECTURE.md)
-- [Core Directives](GEMINI.md)
+## Developer Standards
+- **Clean Harness**: Never commit user data (`data/`, `target_pics/`, `odiyan_refs/`).
+- **Data Hygiene**: Use `.gitignore` to maintain a sterile harness.
+- **Security**: This repository is a harness and MUST NOT contain sensitive user content.
