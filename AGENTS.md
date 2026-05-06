@@ -33,4 +33,7 @@ This project utilizes a distributed agent-based model to manage the complexities
 - **Model Engine**: Transitioned to Flux.1-schnell (Bleeding-Edge). All future generation MUST utilize the `Flux` architecture via `--diffusion-model`.
 - **Architectural Standards**: Prioritize Frequency Harmonization and Laplacian Blending over Gaussian blurring for seamless integration.
 - **Agent Resumption**: Future agents MUST check `ARCHITECTURE.md` and `SKILLS.md`. Ensure that `start_server.sh` is configured to use the Flux weight mapping correctly.
-- **Transparency**: If new automation is added, commit ONLY the logic, never the generated assets.
+## 5. Benchmarking Harness & Modular Architecture
+- **Multi-Engine Benchmarking**: The pipeline is now modular, supporting engine-agnostic swaps via `core/pipeline/swap_engines.py`.
+- **Benchmarking Workflow**: Utilize `core/pipeline/experimental/benchmark_daemon.sh` to route targets to parallel engines (InsightFace, FaceFusion, DreamID).
+- **Extensibility**: Future agents should add new `FaceSwapEngine` subclasses for additional models, ensuring the modular interface remains consistent.
