@@ -2,18 +2,21 @@
 
 This pipeline is designed for ultra-high-fidelity, surgical-grade identity replacement. It operates as an autonomous background daemon, optimized for high-performance CPU execution (48GB RAM, 12 Cores), achieving maximum clarity via 1024x1024+ Stable Diffusion baking.
 
-## Architectural Flow
+## Parallel Benchmarking Architecture
 
-```mermaid
-graph TD
-    A[Source Images (odiyan_refs)] -->|Embedding Learning| B(Identity Profile: odiyan.npy)
-    C[Target Image (target_pics)] -->|Detection & Swap| D[InsightFace Inswapper]
-    D -->|Ultra-Res Baking| E[Stable Diffusion 1024x1024+]
-    E -->|Frequency Separation| F[Detail & Grain Matching]
-    F -->|Laplacian Blending| G[Final Composite]
-    B -->|Identity Lock| D
-    G -->|Identity Lock Validation| H[Output File (samples/odiyan_swaps)]
-```
+To improve face-swapping fidelity, we are transitioning to a multi-engine benchmark harness.
+
+- **`core/pipeline/experimental/benchmark_daemon.sh`**: The orchestrator for parallel execution. It routes the same input target to multiple swapping engines.
+- **Engine-Agnostic Interface**: The pipeline will be refactored to support:
+  - `insightface`: The current baseline.
+  - `facefusion`: Modular, high-fidelity swap and enhancement.
+  - `dreamid`: Diffusion Transformer-based identity preservation.
+
+- **Benchmarking Workflow**:
+  1. Drop target in `target_pics/`.
+  2. Invoke `benchmark_daemon.sh <target>`.
+  3. Analyze outputs in `samples/benchmark/<engine>/` to compare fidelity, lighting, and seams.
+
 
 ## Core Components
 
