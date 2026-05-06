@@ -102,7 +102,7 @@ def laplacian_blend(img1, img2, mask, levels=5):
     
     return np.clip(reconstruct_from_pyramid(blended_pyramid), 0, 255).astype(np.uint8)
 
-def match_grain(source, target):
+def match_grain(source, target, mask=None):
     """Extracts high-frequency grain from target and applies it to source."""
     target_gray = cv2.cvtColor(target, cv2.COLOR_BGR2GRAY)
     # High-pass filter to get grain
@@ -117,10 +117,22 @@ def match_grain(source, target):
     source_grain = cv2.subtract(source_gray, source_blurred)
     source_std = np.std(source_grain)
     
-    # Scale source grain to match target grain intensity if target is sharper
+    # Scale source grain to match target grain intensity if target is sharper.
+    # Keep the adjustment bounded; aggressive sharpening makes neck transitions visible.
     if grain_std > source_std:
         scale = grain_std / (source_std + 1e-6)
-        source = sharpen_image(source, amount=scale * 0.5)
+        amount = float(np.clip((scale - 1.0) * 0.35, 0.05, 0.45))
+        sharpened = sharpen_image(source, amount=amount, threshold=2)
+
+        if mask is not None:
+            h, w = mask.shape[:2]
+            kernel_size = max(9, (min(h, w) // 12) | 1)
+            core_mask = cv2.erode(mask, np.ones((kernel_size, kernel_size), np.uint8), iterations=1)
+            core_mask = cv2.GaussianBlur(core_mask, (kernel_size, kernel_size), max(1, kernel_size // 2))
+            alpha = (core_mask.astype(np.float32) / 255.0)[:, :, None]
+            sharpened = source.astype(np.float32) * (1.0 - alpha) + sharpened.astype(np.float32) * alpha
+
+        source = np.clip(sharpened, 0, 255).astype(np.uint8)
         
     return source
 
@@ -484,6 +496,8 @@ class OdiyanSwapPipeline:
         
         head_crop = swapped_base[y1:y2, x1:x2]
         target_crop = target_img[y1:y2, x1:x2]
+        mask = self.create_full_mask(target_img, target_face.landmark_2d_106)
+        mask_crop = taper_mask_edges(mask[y1:y2, x1:x2])
         
         refined_head = self.refine_with_sd(
             head_crop,
@@ -499,13 +513,11 @@ class OdiyanSwapPipeline:
         refined_head = normalize_lighting_and_saturation(refined_head, target_crop)
         identity_mask = create_inner_identity_mask(refined_head.shape, target_face.landmark_2d_106, crop_bounds=(y1, y2, x1, x2))
         refined_head = identity_anchor_blend(refined_head, head_crop, identity_mask)
-        refined_head = match_grain(refined_head, target_crop)
+        refined_head = match_grain(refined_head, target_crop, mask=mask_crop)
         
         # Phase 4: Integration
         update_task_status("Phase 4: Integration", 95, "Laplacian blending...")
         log("Phase 4: Laplacian Integration...")
-        mask = self.create_full_mask(target_img, target_face.landmark_2d_106)
-        mask_crop = taper_mask_edges(mask[y1:y2, x1:x2])
         
         pyramid_levels = 5 if min(refined_head.shape[:2]) >= 768 else 4
         final_crop = laplacian_blend(refined_head, target_crop, mask_crop, levels=pyramid_levels)
