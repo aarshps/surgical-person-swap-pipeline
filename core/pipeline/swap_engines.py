@@ -53,11 +53,21 @@ class InsightFaceEngine(FaceSwapEngine):
         return swapped_base
 
 class FaceFusionEngine(FaceSwapEngine):
-    def swap(self, source_img, target_img, profile_embedding):
-        # Placeholder for FaceFusion implementation
+    def __init__(self):
+        # Initialize FaceFusion model components here
         pass
 
+    def swap(self, img, target_img, profile_embedding):
+        # Implementation for FaceFusion swap
+        # Mocking for now to ensure harness runs
+        return img 
+
 class DreamIDEngine(FaceSwapEngine):
-    def swap(self, source_img, target_img, profile_embedding):
-        # Placeholder for DreamID implementation
+    def __init__(self):
+        # Initialize DreamID Diffusion Transformer components here
         pass
+
+    def swap(self, img, target_img, profile_embedding):
+        # Implementation for DreamID swap
+        # Mocking for now to ensure harness runs
+        return img
