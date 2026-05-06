@@ -27,13 +27,9 @@ This project utilizes a distributed agent-based model to manage the complexities
 - **Clean Harness Principle**: This repository is strictly the code harness. 
   - **NEVER** commit `data/`, `odiyan_refs/`, `target_pics/`, `samples/`, or `*.npy` files.
   - **Data Hygiene**: Always use `git status` to ensure only source code is tracked. Staging binaries or user data is a security violation.
-- **GitHub Identity**: All GitHub-related actions for this repository MUST use the Optacbook GitHub App identity. Do not rely on a personal or global GitHub session for fetches, pushes, issue/PR work, or connector/API actions. Keep this as a repo-level rule for `hora-odiyan`; do not promote it into global machine instructions.
-- **Local Machine Execution Ban**: On the `/Users/aps/Source/aarshps/hora-odiyan` checkout, agents MUST NOT run project code, tests, scripts, daemons, inference, downloads, model servers, or repo-local automation. Limit work on this machine to source/doc edits plus git inspection, commit, and direct `main` pushes under the Optacbook identity.
-- **Two-Machine Work Agreement**:
-  - This Codex checkout is the code-fix lane. All source changes made from this machine must use the Optacbook GitHub App identity and push directly to `main`.
-  - The Contabo checkout is the runtime lane. Git operations there use the `aarshps` identity, and that machine is the only approved place to run, test, operate daemons, or exercise model/inference workflows.
-  - When Contabo testing finds a defect, the `aarshps` identity should open a GitHub Issue with full reproduction details, observed output, expected behavior, and any relevant logs or screenshots.
-  - The Optacbook/Codex lane should address those Issues with code or documentation fixes only, commit as Optacbook, and push the repair back to `main` for the Contabo machine to pull and retest.
+- **GitHub Identity**: All GitHub-related actions for this repository should use standard authenticated sessions. 
+- **Workflow**: This environment now handles both code development and runtime testing. Maintain clean separation by strictly adhering to the Clean Harness Principle and Data Hygiene policies.
+
 - **Model Engine**: Transitioned to Flux.1-schnell (Bleeding-Edge). All future generation MUST utilize the `Flux` architecture via `--diffusion-model`.
 - **Architectural Standards**: Prioritize Frequency Harmonization and Laplacian Blending over Gaussian blurring for seamless integration.
 - **Agent Resumption**: Future agents MUST check `ARCHITECTURE.md` and `SKILLS.md`. Ensure that `start_server.sh` is configured to use the Flux weight mapping correctly.
