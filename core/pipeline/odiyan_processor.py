@@ -262,15 +262,30 @@ def match_texture_and_blend(swapped_img, target_img, mask):
     
     return np.clip(final_img, 0, 255).astype(np.uint8)
 
+from core.pipeline.swap_engines import InsightFaceEngine, FaceFusionEngine, DreamIDEngine
+
+# ... (Imports and helper functions remain)
+
 class OdiyanSwapPipeline:
-    def __init__(self, profile_path="data/profiles/odiyan.npy"):
-        log("Initializing Hyper-Realistic Odiyan Pipeline...")
-        self.app = insightface.app.FaceAnalysis(name='buffalo_l')
-        self.app.prepare(ctx_id=0, det_size=(640, 640))
-        self.swapper = insightface.model_zoo.get_model('inswapper_128.onnx', download=False, download_zip=False)
-        self.odiyan_face = None
+    def __init__(self, profile_path="data/profiles/odiyan.npy", engine_type="insightface"):
+        log(f"Initializing Hyper-Realistic Odiyan Pipeline ({engine_type})...")
         self.profile_path = profile_path
+        self.engine_type = engine_type
+        self.odiyan_face = None
+        
+        # Select Engine
+        if engine_type == "insightface":
+            self.engine = InsightFaceEngine()
+        elif engine_type == "facefusion":
+            self.engine = FaceFusionEngine()
+        elif engine_type == "dreamid":
+            self.engine = DreamIDEngine()
+        else:
+            raise ValueError("Unknown engine type")
+
         self.sd_url = "http://127.0.0.1:1234/sdapi/v1/img2img"
+
+    # ... (rest of the methods updated to use self.engine.swap)
 
     def ensure_sd_server(self):
         try:
