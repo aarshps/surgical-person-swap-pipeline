@@ -8,8 +8,8 @@ These skills define the agentic logic for the `OdiyanOrchestrator` agent. Keep a
   1. Never run `odiyan_processor.py` directly in the foreground. Always use `./start_daemon.sh` or run it via `nohup` in the background.
   2. The daemon watches `target_pics/` continuously. When a new file is detected, it processes it and outputs to `samples/odiyan_swaps/`.
   3. **Anchor Phase**: Load identity from `odiyan_refs/`, generate base swap, and match colors.
-  4. **Baking Phase**: Start SD Server if needed. Resize head-crop to 1024x1024. Use the Flux.1-schnell configuration (4 steps, 1.0 CFG, Euler sampler) with identity-retention prompts.
-  5. **Integration Phase**: Use Frequency Harmonization to match the target body's grain/noise profile, then dynamically mask and use Laplacian Pyramids to seamlessly blend the crop back to the original body.
+  4. **Baking Phase**: Start SD Server if needed. Use square 1024x1024 head crops to avoid geometry distortion. Use the Flux.1-schnell configuration (4 steps, 1.0 CFG, Euler sampler, ~0.32 denoise) with restrained identity-retention prompts.
+  5. **Integration Phase**: Bound contrast/saturation to the target crop, reintroduce the InsightFace anchor inside likeness-critical regions, match the target body's grain/noise profile, then use edge-tapered Laplacian Pyramids to seamlessly blend the crop back to the original body.
 
 ## Skill: High-Resource Inference
 - **Objective:** Maintain stability and maximize performance on the 48GB RAM, 12 Core system.

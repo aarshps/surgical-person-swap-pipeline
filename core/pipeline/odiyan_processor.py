@@ -12,6 +12,14 @@ import shutil
 
 import json
 
+FLUX_WIDTH = 1024
+FLUX_HEIGHT = 1024
+FLUX_STEPS = 4
+FLUX_CFG_SCALE = 1.0
+FLUX_DENOISING_STRENGTH = 0.32
+FLUX_TIMEOUT_SECONDS = 2400
+IDENTITY_ANCHOR_STRENGTH = 0.34
+
 def log(msg):
     """Unbuffered logging for real-time status tracking."""
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
@@ -115,6 +123,104 @@ def match_grain(source, target):
         source = sharpen_image(source, amount=scale * 0.5)
         
     return source
+
+def normalize_lighting_and_saturation(source, target, strength=0.75):
+    """Bounds contrast/saturation to the target crop without flattening detail."""
+    if source.size == 0 or target.size == 0:
+        return source
+
+    src_lab = cv2.cvtColor(source, cv2.COLOR_BGR2LAB).astype(np.float32)
+    tgt_lab = cv2.cvtColor(target, cv2.COLOR_BGR2LAB).astype(np.float32)
+
+    src_l = src_lab[:, :, 0]
+    tgt_l = tgt_lab[:, :, 0]
+    src_mean, src_std = cv2.meanStdDev(src_l)
+    tgt_mean, tgt_std = cv2.meanStdDev(tgt_l)
+    src_mean, src_std = float(src_mean[0][0]), float(src_std[0][0])
+    tgt_mean, tgt_std = float(tgt_mean[0][0]), float(tgt_std[0][0])
+
+    contrast_scale = np.clip(tgt_std / (src_std + 1e-6), 0.72, 1.18)
+    normalized_l = (src_l - src_mean) * contrast_scale + tgt_mean
+    src_lab[:, :, 0] = src_l * (1.0 - strength) + normalized_l * strength
+
+    src_chroma = np.sqrt((src_lab[:, :, 1] - 128.0) ** 2 + (src_lab[:, :, 2] - 128.0) ** 2)
+    tgt_chroma = np.sqrt((tgt_lab[:, :, 1] - 128.0) ** 2 + (tgt_lab[:, :, 2] - 128.0) ** 2)
+    src_sat = float(np.mean(src_chroma))
+    tgt_sat = float(np.mean(tgt_chroma))
+
+    sat_scale = np.clip(tgt_sat / (src_sat + 1e-6), 0.78, 1.08)
+    src_lab[:, :, 1] = 128.0 + (src_lab[:, :, 1] - 128.0) * sat_scale
+    src_lab[:, :, 2] = 128.0 + (src_lab[:, :, 2] - 128.0) * sat_scale
+
+    return cv2.cvtColor(np.clip(src_lab, 0, 255).astype(np.uint8), cv2.COLOR_LAB2BGR)
+
+def create_inner_identity_mask(shape, landmarks, crop_bounds=None):
+    """Builds an inner-face mask for eyes, nose, mouth, and likeness-critical planes."""
+    mask = np.zeros(shape[:2], dtype=np.uint8)
+    points = landmarks.astype(np.int32)
+    if points.shape[0] > 33:
+        points = points[33:]
+
+    if crop_bounds is not None:
+        _, _, x1, _ = crop_bounds
+        y1 = crop_bounds[0]
+        points = points - np.array([x1, y1], dtype=np.int32)
+
+    h, w = mask.shape[:2]
+    points[:, 0] = np.clip(points[:, 0], 0, max(0, w - 1))
+    points[:, 1] = np.clip(points[:, 1], 0, max(0, h - 1))
+    if len(points) < 3:
+        return mask
+
+    hull = cv2.convexHull(points)
+    cv2.fillConvexPoly(mask, hull, 255)
+    kernel_size = max(15, (min(h, w) // 18) | 1)
+    mask = cv2.dilate(mask, np.ones((kernel_size, kernel_size), np.uint8), iterations=1)
+    mask = cv2.GaussianBlur(mask, (kernel_size, kernel_size), max(1, kernel_size // 2))
+    return mask
+
+def identity_anchor_blend(refined, anchor, identity_mask, strength=IDENTITY_ANCHOR_STRENGTH):
+    """Reintroduces the InsightFace anchor inside identity-critical regions after Flux."""
+    if refined.shape != anchor.shape:
+        anchor = cv2.resize(anchor, (refined.shape[1], refined.shape[0]))
+    alpha = (identity_mask.astype(np.float32) / 255.0)[:, :, None] * strength
+    blended = refined.astype(np.float32) * (1.0 - alpha) + anchor.astype(np.float32) * alpha
+    return np.clip(blended, 0, 255).astype(np.uint8)
+
+def compute_square_head_crop(img_shape, bbox):
+    """Returns a square crop that preserves Flux geometry and includes hair/neck context."""
+    height, width = img_shape[:2]
+    x1, y1, x2, y2 = bbox.astype(int)
+    face_w = max(1, x2 - x1)
+    face_h = max(1, y2 - y1)
+
+    crop_size = int(max(face_w * 2.6, face_h * 2.9))
+    crop_size = max(crop_size, max(face_w, face_h))
+    crop_size = min(crop_size, width, height)
+
+    cx = x1 + face_w // 2
+    cy = y1 + int(face_h * 0.58)
+    half = crop_size // 2
+
+    crop_x1 = max(0, min(width - 1, cx - half))
+    crop_y1 = max(0, min(height - 1, cy - half))
+    crop_x2 = min(width, crop_x1 + crop_size)
+    crop_y2 = min(height, crop_y1 + crop_size)
+
+    crop_x1 = max(0, crop_x2 - crop_size)
+    crop_y1 = max(0, crop_y2 - crop_size)
+    return int(crop_y1), int(crop_y2), int(crop_x1), int(crop_x2)
+
+def taper_mask_edges(mask, margin_ratio=0.09):
+    """Keeps crop borders anchored to the target image to avoid rectangular seams."""
+    h, w = mask.shape[:2]
+    margin = max(8, int(min(h, w) * margin_ratio))
+    edge = np.zeros((h, w), dtype=np.uint8)
+    cv2.rectangle(edge, (margin, margin), (max(margin, w - margin - 1), max(margin, h - margin - 1)), 255, -1)
+    blur = max(9, (margin * 2 + 1) | 1)
+    edge = cv2.GaussianBlur(edge, (blur, blur), max(1, margin))
+    tapered = (mask.astype(np.float32) * (edge.astype(np.float32) / 255.0))
+    return np.clip(tapered, 0, 255).astype(np.uint8)
 
 def create_face_mask(img, landmarks):
     """Creates a smooth convex hull mask from facial landmarks."""
@@ -254,61 +360,67 @@ class OdiyanSwapPipeline:
         return True
 
     def create_full_mask(self, img, landmarks):
-        """Creates a surgically precise gradient mask for face and neck blending."""
+        """Creates a broad face/neck mask for edge-tapered Laplacian integration."""
         mask = np.zeros(img.shape[:2], dtype=np.uint8)
         points = landmarks.astype(np.int32)
         hull = cv2.convexHull(points)
         cv2.fillConvexPoly(mask, hull, 255)
-        
-        # Use a smaller dilation to keep the mask tight to the face/neck structure
-        kernel = np.ones((20, 20), np.uint8)
+
+        x, y, w, h = cv2.boundingRect(hull)
+        neck_center = (x + w // 2, y + int(h * 1.12))
+        neck_axes = (max(8, int(w * 0.48)), max(8, int(h * 0.45)))
+        cv2.ellipse(mask, neck_center, neck_axes, 0, 0, 360, 255, -1)
+
+        kernel_size = max(31, (int(max(w, h) * 0.28) | 1))
+        kernel = np.ones((kernel_size, kernel_size), np.uint8)
         mask = cv2.dilate(mask, kernel, iterations=1)
-        
-        # Multi-stage blurring for a smoother transition at the edges (mitigates neck lines)
-        mask = cv2.GaussianBlur(mask, (51, 51), 25)
-        mask = cv2.GaussianBlur(mask, (101, 101), 50)
+
+        feather = max(31, (int(max(w, h) * 0.42) | 1))
+        mask = cv2.GaussianBlur(mask, (feather, feather), max(1, feather // 3))
         return mask
 
-    def refine_with_sd(self, image, prompt, denoising=0.35):
+    def refine_with_sd(self, image, prompt, denoising=FLUX_DENOISING_STRENGTH):
         if not self.ensure_sd_server(): return image
         log(f"Baking with Flux.1-schnell (High-Resolution 1024x1024, denoising={denoising})...")
-        # Maximum quality as requested by the user
-        image_res = cv2.resize(image, (1024, 1024))
+        image_res = cv2.resize(image, (FLUX_WIDTH, FLUX_HEIGHT))
         _, img_encoded = cv2.imencode('.png', image_res)
         img_b64 = base64.b64encode(img_encoded).decode('utf-8')
-        
+
+        # Flux prompt is intentionally restrained; identity comes from the anchor, not text overdrive.
         enhanced_prompt = (
-            "A professional high-resolution close-up portrait masterpiece. "
-            f"The subject is {prompt}. "
-            "Natural skin texture with soft pores, realistic human eyes with natural reflections. "
-            "The image must strictly maintain the subject's unique facial structure and bone architecture. "
-            "Cinematic soft lighting, balanced contrast, raw 8k photography aesthetic, natural focus."
+            f"{prompt}, exact same facial geometry and expression as source, "
+            "raw documentary portrait, natural skin texture, balanced exposure, "
+            "soft real-world lighting, visible pores, same camera perspective"
         )
-        
+
         payload = {
             "prompt": enhanced_prompt,
+            "negative_prompt": (
+                "cartoon, painting, illustration, blurry, deformed, bad anatomy, "
+                "overprocessed, high contrast, oversaturated, blown highlights, "
+                "crushed shadows, plastic skin, waxy, airbrushed, halo, seam, watermark"
+            ),
             "init_images": [img_b64],
             "denoising_strength": denoising,
-            "steps": 4, 
-            "cfg_scale": 1.0, 
+            "steps": FLUX_STEPS,
+            "cfg_scale": FLUX_CFG_SCALE,
             "sampler_name": "Euler",
-            "width": 1024,
-            "height": 1024
+            "width": FLUX_WIDTH,
+            "height": FLUX_HEIGHT
         }
-        
+
         try:
             log("Sending high-res request to Flux Engine (ETA: ~15-20 mins on CPU)...")
             update_task_status("Phase 2: Flux Refinement", 30, "Baking high-res textures (1024x1024)...")
-            response = requests.post(self.sd_url, json=payload, timeout=2400)
+            response = requests.post(self.sd_url, json=payload, timeout=FLUX_TIMEOUT_SECONDS)
             if response.status_code == 200:
                 log("Flux refinement complete. Decoding results...")
                 data = response.json()
                 img_res = base64.b64decode(data['images'][0])
                 nparr = np.frombuffer(img_res, np.uint8)
                 refined = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                return sharpen_image(refined, amount=0.35)
-            else:
-                log(f"Flux Error: Server returned status {response.status_code}")
+                return refined
+            log(f"Flux Error: Server returned status {response.status_code}")
         except Exception as e:
             log(f"Flux Engine Error: {e}")
         return image
@@ -368,36 +480,38 @@ class OdiyanSwapPipeline:
         update_task_status("Phase 2: Flux Refinement", 25, "Baking textures...")
         log("Phase 2: Surgical Crop & Flux Refinement (Identity-Preserving)...")
         bbox = target_face.bbox.astype(int)
-        w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
-        y1, y2 = max(0, bbox[1]-int(h*0.7)), min(target_img.shape[0], bbox[3]+int(h*1.4))
-        x1, x2 = max(0, bbox[0]-int(w*0.9)), min(target_img.shape[1], bbox[2]+int(w*0.9))
+        y1, y2, x1, x2 = compute_square_head_crop(target_img.shape, bbox)
         
         head_crop = swapped_base[y1:y2, x1:x2]
         target_crop = target_img[y1:y2, x1:x2]
         
-        # Refine with Flux
-        # We can't easily track inner SD steps, so we just set phase
-        refined_head = self.refine_with_sd(head_crop, odiyan_desc, denoising=0.35)
+        refined_head = self.refine_with_sd(
+            head_crop,
+            f"{odiyan_desc}, realistic skin texture, identity-preserving",
+            denoising=FLUX_DENOISING_STRENGTH
+        )
         refined_head = cv2.resize(refined_head, (x2-x1, y2-y1))
         
         # Phase 3: Frequency Harmonization
         update_task_status("Phase 3: Harmonization", 85, "Matching grain...")
         log("Phase 3: Harmonizing Sharpness & Grain...")
         refined_head = match_colors(refined_head, target_crop)
+        refined_head = normalize_lighting_and_saturation(refined_head, target_crop)
+        identity_mask = create_inner_identity_mask(refined_head.shape, target_face.landmark_2d_106, crop_bounds=(y1, y2, x1, x2))
+        refined_head = identity_anchor_blend(refined_head, head_crop, identity_mask)
         refined_head = match_grain(refined_head, target_crop)
         
         # Phase 4: Integration
         update_task_status("Phase 4: Integration", 95, "Laplacian blending...")
         log("Phase 4: Laplacian Integration...")
         mask = self.create_full_mask(target_img, target_face.landmark_2d_106)
-        mask_crop = mask[y1:y2, x1:x2]
+        mask_crop = taper_mask_edges(mask[y1:y2, x1:x2])
         
-        final_crop = laplacian_blend(refined_head, target_crop, mask_crop, levels=4)
+        pyramid_levels = 5 if min(refined_head.shape[:2]) >= 768 else 4
+        final_crop = laplacian_blend(refined_head, target_crop, mask_crop, levels=pyramid_levels)
         
         final = target_img.copy()
         final[y1:y2, x1:x2] = final_crop
-        
-        final = sharpen_image(final, amount=0.03)
         
         cv2.imwrite(output_path, inject_noise(final, 0.0001))
         update_task_status("COMPLETED", 100, os.path.basename(output_path))
