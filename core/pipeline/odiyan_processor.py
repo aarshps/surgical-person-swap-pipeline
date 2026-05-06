@@ -546,20 +546,25 @@ class OdiyanSwapPipeline:
         return True
 
 if __name__ == "__main__":
-    pipeline = OdiyanSwapPipeline()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--engine", default="insightface")
+    parser.add_argument("--output", default="samples/odiyan_swaps")
+    args = parser.parse_args()
+
+    pipeline = OdiyanSwapPipeline(engine_type=args.engine)
     if pipeline.learn_odiyan(ref_dir="odiyan_refs"):
         desc = "Aya, natural realism, maintaining distinct facial features, sharp photography"
-        os.makedirs("samples/odiyan_swaps", exist_ok=True)
+        os.makedirs(args.output, exist_ok=True)
         os.makedirs("data/failed", exist_ok=True)
-        log("Odiyan Daemon is now running. Watching 'target_pics/' for new images...")
+        log(f"Odiyan Daemon is now running ({args.engine}). Watching 'target_pics/'...")
         
         while True:
             targets = glob.glob("target_pics/*")
             for t in targets:
                 if not os.path.isfile(t): continue
                 
-                output_name = "surgical_" + os.path.basename(t)
-                output_path = os.path.join("samples/odiyan_swaps", output_name)
+                output_path = os.path.join(args.output, "surgical_" + os.path.basename(t))
                 
                 if not os.path.exists(output_path):
                     log(f"Found new target: {t}")

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Benchmark Daemon: Run multiple swapping engines in parallel for the same target
+# Benchmark Daemon: Run multiple swapping engines in parallel
 # Usage: ./benchmark_daemon.sh <target_image_path>
 
 TARGET=$1
@@ -8,15 +8,18 @@ if [ -z "$TARGET" ]; then
     exit 1
 fi
 
+PYTHON_BIN="/root/hora-odiyan/venv/bin/python"
+PROCESSOR_PY="/root/hora-odiyan/core/pipeline/odiyan_processor.py"
+
 echo "Starting benchmark pipeline for $TARGET"
 
 # 1. Standard Pipeline (InsightFace)
-./start_daemon.sh --process "$TARGET" --engine "insightface" --output "samples/benchmark/insightface/" &
+$PYTHON_BIN $PROCESSOR_PY --engine insightface --output "samples/benchmark/insightface/" &
 
 # 2. Experimental Pipeline (FaceFusion)
-./start_daemon.sh --process "$TARGET" --engine "facefusion" --output "samples/benchmark/facefusion/" &
+$PYTHON_BIN $PROCESSOR_PY --engine facefusion --output "samples/benchmark/facefusion/" &
 
 # 3. Experimental Pipeline (DreamID)
-./start_daemon.sh --process "$TARGET" --engine "dreamid" --output "samples/benchmark/dreamid/" &
+$PYTHON_BIN $PROCESSOR_PY --engine dreamid --output "samples/benchmark/dreamid/" &
 
 echo "Pipelines launched in parallel."
