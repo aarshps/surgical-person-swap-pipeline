@@ -17,19 +17,19 @@ graph TD
 
 ## Core Components
 
-- **`Odiyan Daemon (start_daemon.sh)`**: The central autonomous background service. Leverages 48GB RAM to keep all models (InsightFace, SD) memory-resident for instant inference.
+- **`Odiyan Daemon (start_daemon.sh)`**: The central autonomous background service. Leverages 48GB RAM to keep all models (InsightFace, Flux.1) memory-resident for instant inference.
 - **`InsightFace Inswapper`**: Handles the foundational identity transfer.
-- **`Stable Diffusion (1024x1024+)`**: Used to bake highly detailed skin and texture.
-- **`Frequency Separation & Grain Matching`**: The "Surgical" core. It extracts high-frequency noise and texture (grain, pores) from the target body and injects it into the AI-generated face to eliminate the "blurry face/sharp body" mismatch.
-- **`Laplacian Blending`**: Multi-band blending that integrates images at multiple frequency levels, ensuring a seamless transition without the "soft halo" effect of standard Gaussian masks.
+- **`Flux.1-schnell (1024x1024)`**: The bleeding-edge replacement for Stable Diffusion. Used to bake hyper-realistic skin and texture without the artificial contrast and artifacts of older models. With 48GB RAM, we utilize the Q8_0 quantization for maximum fidelity.
+- **`Frequency Harmonization & Grain Matching`**: The "Surgical" core. It extracts high-frequency noise and texture (grain, pores) from the target body and injects it into the Flux-generated face to eliminate the "blurry face/sharp body" mismatch.
+- **`Laplacian Blending`**: Multi-band blending that integrates images at multiple frequency levels, ensuring a seamless transition.
 
 ## Workflow
 
 1.  **Identity Learning**: The Daemon calculates the average facial embedding from reference photos.
 2.  **Odiyan Daemon Loop**:
     - Polls `target_pics/` for unprocessed images.
-    - InsightFace performs an initial swap.
-    - The face is surgically cropped and sent to the local SD Server for high-res detail generation.
-    - **Frequency Harmonization**: The system analyzes the sharpness (Laplacian variance) and grain profile of the target image and forces the refined face to match these metrics exactly.
+    - InsightFace performs an initial swap to set the base identity.
+    - The face is surgically cropped and sent to the **Flux Engine** for high-res detail generation (4 steps, 1.0 CFG, Euler sampler).
+    - **Frequency Harmonization**: The system analyzes the sharpness and grain profile of the target image and forces the Flux output to match these metrics.
     - **Integration**: Laplacian pyramids are used to blend the refined face back into the target.
 3.  **Output**: Refined images are exported automatically to `samples/odiyan_swaps/`.

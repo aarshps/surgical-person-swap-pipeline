@@ -11,9 +11,16 @@ This file contains the core context, architectural constraints, and operational 
 - The pipeline is an autonomous background daemon, operating in a high-resource CPU environment (48GB RAM, 12 Cores).
 - **Daemon Execution**: NEVER run the processing scripts directly from the CLI. Always use the background daemon script (`start_daemon.sh`) which polls for new target images.
 - **Phase 1 (Anchor)**: Identity anchoring using InsightFace.
-- **Phase 2 (Bake)**: Ultra-high-resolution (1024x1024+) texture baking via local Stable Diffusion (`stable-diffusion.cpp` img2img). Flux.1-schnell (via `--diffusion-model`) is the mandated engine for its superior identity retention and detail.
-- **Phase 3 (Integrate)**: Surgical blending and high-fidelity masking (GFPGAN is explicitly skipped to preserve natural eye integrity).
+- **Phase 2 (Bake)**: Ultra-high-resolution (1024x1024+) texture baking via local Stable Diffusion (`stable-diffusion.cpp` img2img). Flux.1-schnell (Q8_0 GGUF) is the mandated engine for its superior identity retention. Inference is CPU-based (12 cores, ~20 mins per image).
+- **Phase 3 (Integrate)**: Frequency harmonization and Laplacian blending. Grain matching from the target body is mandatory to avoid "sharp body/blurry face" mismatch.
+- **Dashboard**: Real-time monitoring web interface (Flask) running on port 5001. Features cubic-bezier animations and a live ETA timer.
 - Detailed flow is maintained in `ARCHITECTURE.md`.
+
+## 3. Current Critical Challenges (Handoff Note)
+- **Active Task**: See [GitHub Issue #1](https://github.com/aarshps/hora-odiyan/issues/1) for a detailed breakdown of current quality issues.
+- **Contrast Issue**: Latest Flux outputs are reported as "too contrasty". Prompts must favor soft lighting and balanced dynamics.
+- **Neck Seams**: Persistent visible lines around the neck area. Blending masks need refinement (better landmark adherence, non-linear feathering).
+- **Identity Fidelity**: Continuous refinement of the "Aya" profile is needed. Current logic uses weighted averaging of 112+ frames with outlier removal.
 
 ## 3. Strict Security & Data Policies
 - **Clean Harness Principle**: This repository is strictly the code harness.
