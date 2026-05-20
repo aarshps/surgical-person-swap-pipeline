@@ -8,6 +8,8 @@ venv/
 *.gguf
 *.safetensors
 *.bin
+*.task
+*.pt
 
 # User Data & References
 data/references/
