@@ -49,3 +49,7 @@ __pycache__/
 
 # Embedded repositories
 stable-diffusion.cpp/
+
+# Local Binaries
+gh
+
